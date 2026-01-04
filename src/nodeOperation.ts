@@ -1,4 +1,4 @@
-import { fillParent, refreshIds, unionTopics } from './utils/index'
+import { fillParent, refreshIds, unionTopics, unionTopicsByNodeobjs } from './utils/index'
 import { createExpander, shapeTpc } from './utils/dom'
 import { deepClone } from './utils/index'
 import type { Children, Topic } from './types/dom'
@@ -152,8 +152,12 @@ export const addChild = function (this: MindElixirInstance, el?: Topic, node?: N
 }
 
 export const copyNode = function (this: MindElixirInstance, node: Topic, to: Topic) {
+  this.copyNodeObj(node.nodeObj, to)
+}
+
+export const copyNodeObj = function (this: MindElixirInstance, nodeObj: NodeObj, to: Topic) {
   console.time('copyNode')
-  const deepCloneObj = deepClone(node.nodeObj)
+  const deepCloneObj = deepClone(nodeObj)
   refreshIds(deepCloneObj)
   const res = addChildFunc(this, to, deepCloneObj)
   if (!res) return
@@ -166,12 +170,19 @@ export const copyNode = function (this: MindElixirInstance, node: Topic, to: Top
   })
 }
 
-export const copyNodes = function (this: MindElixirInstance, tpcs: Topic[], to: Topic) {
-  tpcs = unionTopics(tpcs)
+export const copyNodes = function (this: MindElixirInstance, node: Topic[], to: Topic) {
+  this.copyNodeObjs(
+    node.map(e => e.nodeObj),
+    to
+  )
+}
+
+export const copyNodeObjs = function (this: MindElixirInstance, nodes: NodeObj[], to: Topic) {
+  nodes = unionTopicsByNodeobjs(nodes)
   const objs = []
-  for (let i = 0; i < tpcs.length; i++) {
-    const node = tpcs[i]
-    const deepCloneObj = deepClone(node.nodeObj)
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    const deepCloneObj = deepClone(node)
     refreshIds(deepCloneObj)
     const res = addChildFunc(this, to, deepCloneObj)
     if (!res) return

@@ -1,7 +1,10 @@
+import { stringifyData } from '../interact'
 import type { Topic } from '../types/dom'
 import type { KeypressOptions, MindElixirInstance } from '../types/index'
 import { DirectionClass } from '../types/index'
 import { setExpand } from '../utils'
+
+const COPY_MAGIC = 'MIND-ELIXIR-WAIT-COPY'
 
 const selectRootLeft = (mei: MindElixirInstance) => {
   const tpcs = mei.map.querySelectorAll('.lhs>me-wrapper>me-parent>me-tpc')
@@ -178,27 +181,6 @@ export default function (mind: MindElixirInstance, options: boolean | KeypressOp
     PageDown: () => {
       mind.moveDownNode()
     },
-    c: (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey) {
-        mind.waitCopy = mind.currentNodes
-      }
-    },
-    x: (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey) {
-        mind.waitCopy = mind.currentNodes
-        handleRemove()
-      }
-    },
-    v: (e: KeyboardEvent) => {
-      if (!mind.waitCopy || !mind.currentNode) return
-      if (e.metaKey || e.ctrlKey) {
-        if (mind.waitCopy.length === 1) {
-          mind.copyNode(mind.waitCopy[0], mind.currentNode)
-        } else {
-          mind.copyNodes(mind.waitCopy, mind.currentNode)
-        }
-      }
-    },
     '=': (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
         handleZoom(mind, 'in')
@@ -240,9 +222,46 @@ export default function (mind: MindElixirInstance, options: boolean | KeypressOp
   }
   mind.container.onkeydown = e => {
     // it will prevent all input in children node, so we have to stop propagation in input element
-    e.preventDefault()
+    if (!((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x'))) {
+      e.preventDefault()
+    }
     if (!mind.editable) return
     const keyHandler = key2func[e.key]
     keyHandler && keyHandler(e)
   }
+
+  mind.container.addEventListener('copy', (e: ClipboardEvent) => {
+    if (!mind.currentNodes) return
+    if (e.clipboardData) {
+      const data = stringifyData({ magic: COPY_MAGIC, data: mind.currentNodes.map(node => node.nodeObj) })
+      e.clipboardData.setData('text/plain', data)
+      e.preventDefault()
+    }
+  })
+
+  mind.container.addEventListener('cut', (e: ClipboardEvent) => {
+    if (!mind.currentNodes) return
+
+    const data = stringifyData({ magic: COPY_MAGIC, data: mind.currentNodes.map(node => node.nodeObj) })
+    if (e.clipboardData) {
+      e.clipboardData.setData('text/plain', data)
+      e.preventDefault()
+      handleRemove()
+    }
+  })
+
+  mind.container.addEventListener('paste', (e: ClipboardEvent) => {
+    const json = e.clipboardData?.getData('text/plain')
+    if (json && json.startsWith('{') && json.indexOf(`"${COPY_MAGIC}"`) > 0) {
+      const data = JSON.parse(json).data
+      console.log(data)
+      if (data && mind.currentNode) {
+        if (data.length === 1) {
+          mind.copyNodeObj(data[0], mind.currentNode)
+        } else {
+          mind.copyNodeObjs(data, mind.currentNode)
+        }
+      }
+    }
+  })
 }
