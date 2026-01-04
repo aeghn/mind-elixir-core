@@ -80,7 +80,11 @@ export const handleZoom = function (
   }
 }
 
-export default function (mind: MindElixirInstance, options: boolean | KeypressOptions) {
+export default function (
+  mind: MindElixirInstance,
+  options: boolean | KeypressOptions,
+  pasteHandler?: (e: ClipboardEvent) => void
+) {
   options = options === true ? {} : options
   const handleRemove = () => {
     if (mind.currentArrow) mind.removeArrow()
@@ -262,6 +266,8 @@ export default function (mind: MindElixirInstance, options: boolean | KeypressOp
           mind.copyNodeObjs(data, mind.currentNode)
         }
       }
+    } else if (pasteHandler) {
+      pasteHandler(e)
     }
   })
 }
