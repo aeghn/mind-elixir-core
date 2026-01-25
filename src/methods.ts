@@ -84,7 +84,7 @@ const methods = {
     // plugins
     this.toolBar && toolBar(this)
     if (import.meta.env.MODE !== 'lite') {
-      this.keypress && keypressInit(this, this.keypress)
+      this.keypress && keypressInit(this, this.keypress, this.pasteHandler)
 
       if (this.editable) {
         selection(this)
