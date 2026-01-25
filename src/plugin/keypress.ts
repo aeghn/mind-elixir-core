@@ -2,7 +2,7 @@ import { stringifyData } from '../interact'
 import type { Topic } from '../types/dom'
 import type { KeypressOptions, MindElixirInstance } from '../types/index'
 import { DirectionClass } from '../types/index'
-import { setExpand } from '../utils'
+import { setExpand, unionNodeObjs } from '../utils'
 
 const COPY_MAGIC = 'MIND-ELIXIR-WAIT-COPY'
 
@@ -122,6 +122,7 @@ export default function (mind: MindElixirInstance, options: boolean | KeypressOp
       mind.container.removeEventListener('keydown', handleControlKPlusX)
     }
   }
+
   const key2func: Record<string, (e: KeyboardEvent) => void> = {
     Enter: e => {
       if (e.shiftKey) {
@@ -231,48 +232,48 @@ export default function (mind: MindElixirInstance, options: boolean | KeypressOp
     keyHandler && keyHandler(e)
   }
 
-  mind.container.addEventListener('copy', (e: ClipboardEvent) => {
-    if (mind.currentNodes.length === 0) return
+  const handleSetNodesClip = (e: ClipboardEvent) => {
+    if (mind.currentNodes.length === 0) return false
     if (e.clipboardData) {
-      const data = stringifyData({ magic: COPY_MAGIC, data: mind.currentNodes.map(node => node.nodeObj) })
+      const nodeObjs = unionNodeObjs(mind.currentNodes.map(node => node.nodeObj))
+      const data = stringifyData({
+        magic: COPY_MAGIC,
+        data: nodeObjs,
+      })
       e.clipboardData.setData('text/plain', data)
       e.preventDefault()
+      return true
     }
-  })
+    return false
+  }
 
+  mind.container.addEventListener('copy', handleSetNodesClip)
   mind.container.addEventListener('cut', (e: ClipboardEvent) => {
-    if (mind.currentNodes.length === 0) return
-
-    const data = stringifyData({ magic: COPY_MAGIC, data: mind.currentNodes.map(node => node.nodeObj) })
-    if (e.clipboardData) {
-      e.clipboardData.setData('text/plain', data)
-      e.preventDefault()
-      handleRemove()
-    }
+    if (handleSetNodesClip(e)) handleRemove()
   })
 
   mind.container.addEventListener('paste', (e: ClipboardEvent) => {
-    const json = e.clipboardData?.getData('text/plain');
+    const json = e.clipboardData?.getData('text/plain')
     if (json) {
       try {
-        const parsed = JSON.parse(json);
+        const parsed = JSON.parse(json)
         if (parsed && parsed.magic === COPY_MAGIC && Array.isArray(parsed.data)) {
-          const data = parsed.data;
+          const data = parsed.data
           if (data.length > 0 && mind.currentNode) {
             if (data.length === 1) {
-              mind.copyNodeObj(data[0], mind.currentNode);
+              mind.copyNodeObj(data[0], mind.currentNode)
             } else {
-              mind.copyNodeObjs(data, mind.currentNode);
+              mind.copyNodeObjs(data, mind.currentNode)
             }
-            e.preventDefault();
+            e.preventDefault()
           }
-          return;
+          return
         }
       } catch (error) {
         // Not a valid JSON from MindElixir, fall through to pasteHandler.
       }
-    } 
-     if (pasteHandler) {
+    }
+    if (pasteHandler) {
       pasteHandler(e)
     }
   })
