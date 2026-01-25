@@ -166,7 +166,7 @@ export const unionTopics = (nodes: Topic[]) => {
     })
 }
 
-export const unionTopicsByNodeobjs = (nodes: NodeObj[]) => {
+export const unionNodeObjs = (nodes: NodeObj[]) => {
   return nodes
     .filter(node => node.parent)
     .filter((node, _, nodes) => {

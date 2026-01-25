@@ -1,4 +1,4 @@
-import { fillParent, refreshIds, unionTopics, unionTopicsByNodeobjs } from './utils/index'
+import { fillParent, refreshIds, unionTopics, unionNodeObjs } from './utils/index'
 import { createExpander, shapeTpc } from './utils/dom'
 import { deepClone } from './utils/index'
 import type { Children, Topic } from './types/dom'
@@ -150,8 +150,39 @@ export const addChild = function (this: MindElixirInstance, el?: Topic, node?: N
   this.selectNode(newTop.firstChild, true)
 }
 
-export const copyNode = function (this: MindElixirInstance, tpc: Topic, to: Topic) {
-  this.copyNodeObj(tpc.nodeObj, to)
+export const copyNode = function (this: MindElixirInstance, node: Topic, to: Topic) {
+  console.time('copyNode')
+  const deepCloneObj = deepClone(node.nodeObj)
+  refreshIds(deepCloneObj)
+  const res = addChildFunc(this, to, deepCloneObj)
+  if (!res) return
+  const { newNodeObj } = res
+  console.timeEnd('copyNode')
+  this.selectNode(this.findEle(newNodeObj.id))
+  this.bus.fire('operation', {
+    name: 'copyNode',
+    obj: newNodeObj,
+  })
+}
+
+export const copyNodes = function (this: MindElixirInstance, tpcs: Topic[], to: Topic) {
+  tpcs = unionTopics(tpcs)
+  const objs = []
+  for (let i = 0; i < tpcs.length; i++) {
+    const node = tpcs[i]
+    const deepCloneObj = deepClone(node.nodeObj)
+    refreshIds(deepCloneObj)
+    const res = addChildFunc(this, to, deepCloneObj)
+    if (!res) return
+    const { newNodeObj } = res
+    objs.push(newNodeObj)
+  }
+  this.unselectNodes(this.currentNodes)
+  this.selectNodes(objs.map(obj => this.findEle(obj.id)))
+  this.bus.fire('operation', {
+    name: 'copyNodes',
+    objs,
+  })
 }
 
 export const copyNodeObj = function (this: MindElixirInstance, nodeObj: NodeObj, to: Topic) {
@@ -169,15 +200,8 @@ export const copyNodeObj = function (this: MindElixirInstance, nodeObj: NodeObj,
   })
 }
 
-export const copyNodes = function (this: MindElixirInstance, tpcs: Topic[], to: Topic) {
-  this.copyNodeObjs(
-    tpcs.map(e => e.nodeObj),
-    to
-  )
-}
-
 export const copyNodeObjs = function (this: MindElixirInstance, nodes: NodeObj[], to: Topic) {
-  nodes = unionTopicsByNodeobjs(nodes)
+  nodes = unionNodeObjs(nodes)
   const objs = []
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]
